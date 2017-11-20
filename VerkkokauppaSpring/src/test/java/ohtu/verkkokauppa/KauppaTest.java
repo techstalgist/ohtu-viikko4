@@ -15,8 +15,8 @@ public class KauppaTest {
         pankki = mock(Pankki.class);
 
         viite = mock(Viitegeneraattori.class);
-        // määritellään että viitegeneraattori palauttaa viitten 42
-        when(viite.uusi()).thenReturn(42);
+        // määritellään että viitegeneraattori palauttaa viitten 42 ja seuraavaksi 43
+        when(viite.uusi()).thenReturn(42).thenReturn(43);
         
         varasto = mock(Varasto.class);
         when(varasto.saldo(1)).thenReturn(10);
@@ -73,5 +73,47 @@ public class KauppaTest {
         kauppa.tilimaksu("pekka", "12345");
         
         verify(pankki).tilisiirto("pekka", 42, "12345", "33333-44455", 5);
+    }
+    
+    @Test
+    public void asioinninAloittaminenTyhjentaaOstoskorin() {
+        
+        kauppa.aloitaAsiointi();
+        kauppa.lisaaKoriin(1);
+        kauppa.tilimaksu("pekka", "12345");
+        
+        verify(pankki).tilisiirto(eq("pekka"), anyInt(), eq("12345"), eq("33333-44455"), eq(5));
+        
+        kauppa.aloitaAsiointi();
+        kauppa.lisaaKoriin(2);
+        kauppa.tilimaksu("saara", "23456");
+        
+        verify(pankki).tilisiirto(eq("saara"), anyInt(), eq("23456"), eq("33333-44455"), eq(4));
+    }
+    
+    @Test
+    public void kauppaPyytaaUudenViitteenJokaiselleMaksulle() {
+        kauppa.aloitaAsiointi();
+        kauppa.lisaaKoriin(1);
+        kauppa.tilimaksu("pekka", "12345");
+        
+        verify(pankki).tilisiirto(eq("pekka"), eq(42), eq("12345"), eq("33333-44455"), anyInt());
+        
+        kauppa.aloitaAsiointi();
+        kauppa.lisaaKoriin(2);
+        kauppa.tilimaksu("saara", "23456");
+        
+        verify(pankki).tilisiirto(eq("saara"), eq(43), eq("23456"), eq("33333-44455"), anyInt());
+    }
+    
+    @Test
+    public void tuotteenPoistaminenKoristaAiheuttaaPalautuksenVarastoon() {
+        kauppa.aloitaAsiointi();
+        kauppa.lisaaKoriin(1);
+        kauppa.poistaKorista(1);
+        kauppa.lisaaKoriin(2);
+        kauppa.tilimaksu("pekka", "12345");
+        
+        verify(pankki).tilisiirto("pekka", 42, "12345", "33333-44455", 4);
     }
 }
